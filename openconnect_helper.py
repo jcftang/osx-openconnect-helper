@@ -113,7 +113,8 @@ class ProfileManager(object):
     def get_rsa_token(self, name):
         return self.get_keychain_password(name, kind='openconnect-rsa')
 
-    def set_profile(self, name, url, user, group=None, fingerprint=None):
+    def set_profile(self, name, url, user, group=None, fingerprint=None,
+                    cafile=None, sslkey=None, certificate=None):
         profiles = self.config.setdefault('profiles', [])
         for idx, profile in enumerate(profiles):
             if profile.get('name') == name:
@@ -122,7 +123,9 @@ class ProfileManager(object):
             profiles.append(None)
             idx = -1
         profiles[idx] = _make_toml_group(name=name, url=url, user=user,
-                                         group=group, fingerprint=fingerprint)
+                                         group=group, fingerprint=fingerprint,
+                                         cafile=cafile, sslkey=sslkey,
+                                         certificate=certificate)
 
     def remove_profile(self, name):
         self.remove_keychain_password(name)
@@ -178,6 +181,16 @@ class ProfileManager(object):
         if fingerprint is not None:
             args.append('--servercert=%s' % fingerprint)
         args.append(profile['url'])
+
+        cafile = profile.get('cafile')
+        if cafile is not None:
+            args.append('--cafile=%s' % cafile)
+        sslkey = profile.get('sslkey')
+        if sslkey is not None:
+            args.append('--sslkey=%s' % sslkey)
+        certificate = profile.get('certificate')
+        if certificate is not None:
+            args.append('--certificate=%s' % certificate)
 
         c = Popen(args, **kwargs)
         try:
@@ -243,7 +256,10 @@ def common_profile_params(f):
                      'requires stoken to be installed and compiled into '
                      'openconnect.'),
         click.option('--remove-rsa-token', help='Removes an old RSA token.',
-                     is_flag=True)
+                     is_flag=True),
+        click.option('--cafile', help='CA certificate'),
+        click.option('--sslkey', help='Client SSL private key'),
+        click.option('--certificate', help='Client certificate'),
     ]
     for option in reversed(options):
         f = option(f)
